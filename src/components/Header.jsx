@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, Search, Sun, Moon, LogIn, LogOut, PenTool, X } from 'lucide-react';
+import AuthComponent from './AuthComponent';
 
 export default function Header({
   searchQuery,
@@ -45,8 +46,8 @@ export default function Header({
             )}
           </button>
 
-          {/* Admin area */}
-          {isAdmin ? (
+          {/* Admin area / Writing tools */}
+          {isAdmin && (
             <>
               <span className="admin-badge">
                 <PenTool size={14} />
@@ -55,16 +56,11 @@ export default function Header({
               <button onClick={onNewPostClick} className="btn-primary">
                 글 작성
               </button>
-              <button onClick={onLogoutClick} className="btn-outline">
-                로그아웃
-              </button>
             </>
-          ) : (
-            <button onClick={onLoginClick} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <LogIn size={16} />
-              로그인
-            </button>
           )}
+
+          {/* Supabase Google Auth Component */}
+          <AuthComponent />
         </div>
       </div>
     </header>

@@ -8,6 +8,7 @@ import PostDetailModal from './components/PostDetailModal';
 import PostFormModal from './components/PostFormModal';
 import LoginModal from './components/LoginModal';
 import { postService } from './supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
 export default function App() {
   const [posts, setPosts] = useState([]);
@@ -41,6 +42,28 @@ export default function App() {
 
   useEffect(() => {
     fetchPosts();
+  }, []);
+
+  // Supabase Auth 상태 감지 및 관리자 상태(isAdmin) 동기화
+  useEffect(() => {
+    const syncAuthState = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAdmin(!!session?.user);
+      } catch (err) {
+        console.error('인증 상태 동기화 실패:', err);
+      }
+    };
+
+    syncAuthState();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session?.user);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // 테마 초기 설정
