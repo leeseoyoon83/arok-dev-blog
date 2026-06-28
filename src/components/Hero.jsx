@@ -1,5 +1,6 @@
 import React from 'react';
 import { Github, Linkedin, Mail } from 'lucide-react';
+import mentorProfile from '../mentor-profile.jpg';
 
 export default function Hero() {
   return (
@@ -8,7 +9,7 @@ export default function Hero() {
         <div className="hero-background-glow"></div>
         <div className="hero-profile-area">
           <div className="profile-avatar-wrapper">
-            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Kim" alt="Mentor Avatar" className="profile-avatar" />
+            <img src={mentorProfile} alt="Mentor Avatar" className="profile-avatar" />
             <span className="avatar-badge">Mentor</span>
           </div>
           <div className="profile-info">

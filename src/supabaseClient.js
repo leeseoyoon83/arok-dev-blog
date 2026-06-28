@@ -46,14 +46,15 @@ export const postService = {
           .order('created_at', { ascending: false })
 
         if (!error && data) {
-          // Supabase의 스네이크 케이스(created_at)를 React 컴포넌트가 쓰는 카멜 케이스(createdAt)로 포맷 변환
+          // Supabase의 스네이크 케이스(created_at, user_id)를 React 컴포넌트가 쓰는 카멜 케이스로 포맷 변환
           return data.map(p => ({
             id: p.id,
             title: p.title,
             content: p.content,
             category: p.category,
             tags: p.tags || [],
-            createdAt: p.created_at
+            createdAt: p.created_at,
+            userId: p.user_id
           }))
         }
         console.error("Supabase 조회 실패, LocalStorage로 대체합니다:", error)
@@ -86,6 +87,10 @@ export const postService = {
 
     if (this.isUsingSupabase) {
       try {
+        // 현재 인증된 사용자 가져오기
+        const { data: { user } } = await supabase.auth.getUser()
+        const userId = user?.id || null
+
         const { data, error } = await supabase
           .from('posts')
           .insert([{
@@ -93,7 +98,8 @@ export const postService = {
             content: newPost.content,
             category: newPost.category,
             tags: newPost.tags,
-            created_at: newPost.createdAt
+            created_at: newPost.createdAt,
+            user_id: userId
           }])
           .select()
 
@@ -105,7 +111,8 @@ export const postService = {
             content: created.content,
             category: created.category,
             tags: created.tags,
-            createdAt: created.created_at
+            createdAt: created.created_at,
+            userId: created.user_id
           }
         }
         console.error("Supabase 글 등록 실패, LocalStorage에 저장합니다:", error)
@@ -119,7 +126,7 @@ export const postService = {
     const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY))
     // 간단한 ID 생성 (가장 큰 ID + 1)
     const nextId = localData.length > 0 ? Math.max(...localData.map(p => p.id)) + 1 : 1
-    const createdPost = { id: nextId, ...newPost }
+    const createdPost = { id: nextId, userId: 'mock-user-id', ...newPost }
     localData.push(createdPost)
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData))
     return createdPost
@@ -149,5 +156,62 @@ export const postService = {
     localData = localData.filter(p => String(p.id) !== String(id))
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData))
     return true
+  },
+
+  /**
+   * 포스트 수정
+   */
+  async updatePost(id, { title, content, category, tags }) {
+    const processedTags = Array.isArray(tags) 
+      ? tags 
+      : tags.split(',').map(t => t.trim()).filter(Boolean)
+
+    if (this.isUsingSupabase) {
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .update({
+            title,
+            content,
+            category,
+            tags: processedTags
+          })
+          .eq('id', id)
+          .select()
+
+        if (!error && data && data[0]) {
+          const updated = data[0]
+          return {
+            id: updated.id,
+            title: updated.title,
+            content: updated.content,
+            category: updated.category,
+            tags: updated.tags,
+            createdAt: updated.created_at,
+            userId: updated.user_id
+          }
+        }
+        console.error("Supabase 글 수정 실패, LocalStorage에서 수정합니다:", error)
+      } catch (err) {
+        console.error("Supabase 글 수정 에러, LocalStorage에서 수정합니다:", err)
+      }
+    }
+
+    // 폴백 모드: LocalStorage에서 수정
+    initializeLocalStorage()
+    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY))
+    const index = localData.findIndex(p => String(p.id) === String(id))
+    if (index !== -1) {
+      localData[index] = {
+        ...localData[index],
+        title,
+        content,
+        category,
+        tags: processedTags
+      }
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData))
+      return localData[index]
+    }
+    throw new Error("포스트를 찾을 수 없습니다.")
   }
 }

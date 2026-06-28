@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, ArrowLeft, Heart, Calendar } from 'lucide-react';
+import { X, ArrowLeft, Heart, Calendar, Edit3, Lock } from 'lucide-react';
+import mentorProfile from '../mentor-profile.jpg';
 
-export default function PostDetailModal({ post, onClose }) {
+export default function PostDetailModal({ post, isAdmin, isMembership, onClose, onEditClick, onGoogleLogin }) {
   const [scrollPercent, setScrollPercent] = useState(0);
   const articleContainerRef = useRef(null);
 
@@ -68,9 +69,23 @@ export default function PostDetailModal({ post, onClose }) {
             <span>글 목록으로 돌아가기</span>
           </button>
           
-          <button className="dialog-close-btn" onClick={onClose} aria-label="닫기">
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isAdmin && (
+              <button 
+                className="btn-outline" 
+                onClick={() => {
+                  if (onEditClick) onEditClick(post);
+                }}
+                style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+              >
+                <Edit3 size={14} />
+                수정하기
+              </button>
+            )}
+            <button className="dialog-close-btn" onClick={onClose} aria-label="닫기">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Article Body */}
@@ -89,7 +104,7 @@ export default function PostDetailModal({ post, onClose }) {
             {/* Author Info Card */}
             <div className="author-card" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px' }}>
               <img 
-                src="https://api.dicebear.com/7.x/bottts/svg?seed=Kim" 
+                src={mentorProfile} 
                 alt="Mentor Avatar" 
                 className="author-avatar" 
                 style={{ width: '36px', height: '36px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }} 
@@ -105,10 +120,47 @@ export default function PostDetailModal({ post, onClose }) {
           </header>
 
           {/* Article Contents */}
-          <section 
-            className="article-body-content"
-            dangerouslySetInnerHTML={{ __html: content }}
-          ></section>
+          {(() => {
+            const isLocked = category === '멘토의 지혜' && !isMembership;
+            
+            const getPreviewContent = (html) => {
+              if (!html) return '';
+              const paragraphs = html.split('</p>');
+              if (paragraphs.length > 0) {
+                return paragraphs[0] + '</p>';
+              }
+              return html;
+            };
+
+            return (
+              <>
+                <section 
+                  className="article-body-content"
+                  dangerouslySetInnerHTML={{ __html: isLocked ? getPreviewContent(content) : content }}
+                  style={isLocked ? { 
+                    maskImage: 'linear-gradient(to bottom, black 20%, transparent 95%)', 
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 95%)' 
+                  } : {}}
+                ></section>
+
+                {isLocked && (
+                  <div className="membership-paywall-container">
+                    <div className="paywall-icon-wrapper">
+                      <Lock size={22} />
+                    </div>
+                    <h4 className="paywall-title">멘토의 지혜 멤버십 전용</h4>
+                    <p className="paywall-description">
+                      이 글은 멘토의 특별한 지혜와 경험이 담긴 멤버십 회원 전용 글입니다.
+                      로그인하여 멘토의 인생 이야기를 전체 감상해 보세요.
+                    </p>
+                    <button className="paywall-login-btn" onClick={onGoogleLogin}>
+                      구글 계정으로 로그인
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Footer inside Article */}
           <footer className="article-footer">

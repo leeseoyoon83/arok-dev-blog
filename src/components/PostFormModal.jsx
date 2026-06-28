@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { X, PenTool } from 'lucide-react';
 
-export default function PostFormModal({ onSubmit, onClose }) {
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('멘토의 지혜');
-  const [tagsInput, setTagsInput] = useState('');
-  const [content, setContent] = useState('');
+export default function PostFormModal({ post, onSubmit, onClose }) {
+  // HTML 태그가 포함된 본문을 마크다운 개행 형태로 클리닝하는 헬퍼 함수
+  const getInitialContent = (html) => {
+    if (!html) return '';
+    let cleaned = html
+      .replace(/<\/p>\s*<p>/gi, '\n\n')
+      .replace(/<p>/gi, '')
+      .replace(/<\/p>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n');
+    return cleaned;
+  };
+
+  const [title, setTitle] = useState(post ? post.title : '');
+  const [category, setCategory] = useState(post ? post.category : '멘토의 지혜');
+  const [tagsInput, setTagsInput] = useState(post && post.tags ? post.tags.join(', ') : '');
+  const [content, setContent] = useState(post ? getInitialContent(post.content) : '');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -49,7 +60,7 @@ export default function PostFormModal({ onSubmit, onClose }) {
         <div className="dialog-header">
           <h3 className="dialog-title">
             <PenTool size={20} className="logo-icon" />
-            새로운 지혜 나누기
+            {post ? '이야기 다듬기' : '새로운 지혜 나누기'}
           </h3>
           <button className="dialog-close-btn" onClick={onClose} aria-label="닫기">
             <X size={20} />
@@ -115,7 +126,7 @@ export default function PostFormModal({ onSubmit, onClose }) {
               취소
             </button>
             <button type="submit" className="btn-primary">
-              발행하기
+              {post ? '수정하기' : '발행하기'}
             </button>
           </div>
         </form>

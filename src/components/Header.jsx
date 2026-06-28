@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Search, Sun, Moon, LogIn, LogOut, PenTool, X } from 'lucide-react';
+import { BookOpen, Search, Sun, Moon, LogIn, LogOut, PenTool, X, LayoutDashboard } from 'lucide-react';
 import AuthComponent from './AuthComponent';
 
 export default function Header({
@@ -10,7 +10,8 @@ export default function Header({
   isAdmin,
   onLoginClick,
   onLogoutClick,
-  onNewPostClick
+  onNewPostClick,
+  onCMSClick
 }) {
   return (
     <header className="main-header">
@@ -53,6 +54,10 @@ export default function Header({
                 <PenTool size={14} />
                 관리자
               </span>
+              <button onClick={onCMSClick} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.85rem' }}>
+                <LayoutDashboard size={14} />
+                CMS 대시보드
+              </button>
               <button onClick={onNewPostClick} className="btn-primary">
                 글 작성
               </button>

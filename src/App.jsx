@@ -7,6 +7,7 @@ import PostCard from './components/PostCard';
 import PostDetailModal from './components/PostDetailModal';
 import PostFormModal from './components/PostFormModal';
 import LoginModal from './components/LoginModal';
+import CMSDashboardModal from './components/CMSDashboardModal';
 import { postService } from './supabaseClient';
 import { supabase } from '../lib/supabaseClient';
 
@@ -21,11 +22,15 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(() => {
     return localStorage.getItem('mentors_space_is_admin') === 'true';
   });
+  const [user, setUser] = useState(null);
+  const isMembership = isAdmin || !!user;
 
   // 모달 상태 정의
   const [selectedPost, setSelectedPost] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [isCMSOpen, setIsCMSOpen] = useState(false);
 
   // 포스트 패치
   const fetchPosts = async () => {
@@ -51,7 +56,8 @@ export default function App() {
     const syncAuthState = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setIsAdmin(!!session?.user);
+        setUser(session?.user ?? null);
+        setIsAdmin(!!session?.user || localStorage.getItem('mentors_space_is_admin') === 'true');
       } catch (err) {
         console.error('인증 상태 동기화 실패:', err);
       }
@@ -60,7 +66,8 @@ export default function App() {
     syncAuthState();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(!!session?.user);
+      setUser(session?.user ?? null);
+      setIsAdmin(!!session?.user || localStorage.getItem('mentors_space_is_admin') === 'true');
     });
 
     return () => {
@@ -91,10 +98,40 @@ export default function App() {
     alert('관리자로 로그인되었습니다. (글 작성 및 삭제 기능 활성화)');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        console.error('Signout failed', err);
+      }
+    }
     setIsAdmin(false);
+    setUser(null);
     localStorage.removeItem('mentors_space_is_admin');
     alert('로그아웃 되었습니다.');
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!supabase) {
+      alert('Supabase 클라이언트가 초기화되지 않았습니다. .env.local 설정을 확인해 주세요.');
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('구글 로그인 에러:', err.message);
+      alert('구글 로그인 중 오류가 발생했습니다: ' + err.message);
+    }
   };
 
   // 새 글 발행
@@ -107,6 +144,25 @@ export default function App() {
     } catch (err) {
       console.error(err);
       alert('기록 도중 에러가 발생했습니다.');
+    }
+  };
+
+  // 글 수정
+  const handleUpdatePost = async (updatedData) => {
+    try {
+      const updatedPost = await postService.updatePost(editingPost.id, updatedData);
+      setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
+      
+      // 만약 상세 보기 모달이 켜져있다면, 상세 보기 내용도 업데이트해 줍니다.
+      if (selectedPost && selectedPost.id === updatedPost.id) {
+        setSelectedPost(updatedPost);
+      }
+      
+      setEditingPost(null);
+      alert('이야기가 따뜻하게 수정되었습니다.');
+    } catch (err) {
+      console.error(err);
+      alert('수정 도중 에러가 발생했습니다.');
     }
   };
 
@@ -172,6 +228,7 @@ export default function App() {
         onLoginClick={() => setIsLoginModalOpen(true)}
         onLogoutClick={handleLogout}
         onNewPostClick={() => setIsNewPostModalOpen(true)}
+        onCMSClick={() => setIsCMSOpen(true)}
       />
 
       <main className="content-wrapper">
@@ -207,8 +264,10 @@ export default function App() {
                   key={post.id}
                   post={post}
                   isAdmin={isAdmin}
+                  isMembership={isMembership}
                   onClick={setSelectedPost}
                   onDeleteClick={handleDeletePost}
+                  onEditClick={setEditingPost}
                   onTagClick={setSelectedTag}
                 />
               ))}
@@ -275,7 +334,11 @@ export default function App() {
       {selectedPost && (
         <PostDetailModal
           post={selectedPost}
+          isAdmin={isAdmin}
+          isMembership={isMembership}
           onClose={() => setSelectedPost(null)}
+          onEditClick={setEditingPost}
+          onGoogleLogin={handleGoogleLogin}
         />
       )}
 
@@ -290,6 +353,27 @@ export default function App() {
         <PostFormModal
           onSubmit={handleCreatePost}
           onClose={() => setIsNewPostModalOpen(false)}
+        />
+      )}
+
+      {editingPost && (
+        <PostFormModal
+          post={editingPost}
+          onSubmit={handleUpdatePost}
+          onClose={() => setEditingPost(null)}
+        />
+      )}
+
+      {isCMSOpen && (
+        <CMSDashboardModal
+          posts={posts}
+          onClose={() => setIsCMSOpen(false)}
+          onEditClick={setEditingPost}
+          onDeleteClick={handleDeletePost}
+          onNewPostClick={() => {
+            setIsCMSOpen(false);
+            setIsNewPostModalOpen(true);
+          }}
         />
       )}
     </div>
