@@ -7,6 +7,11 @@ export default function AuthComponent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     const getSession = async () => {
       try {
@@ -27,11 +32,17 @@ export default function AuthComponent() {
     });
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const handleGoogleLogin = async () => {
+    if (!supabase) {
+      alert('Supabase 클라이언트가 초기화되지 않았습니다. .env.local 설정을 확인해 주세요.');
+      return;
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -47,6 +58,7 @@ export default function AuthComponent() {
   };
 
   const handleLogout = async () => {
+    if (!supabase) return;
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;

@@ -46,6 +46,8 @@ export default function App() {
 
   // Supabase Auth 상태 감지 및 관리자 상태(isAdmin) 동기화
   useEffect(() => {
+    if (!supabase) return;
+
     const syncAuthState = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -62,7 +64,9 @@ export default function App() {
     });
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
